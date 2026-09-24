@@ -3,9 +3,11 @@ import { useBenchStore } from '@/store/useBenchStore';
 import FilterBar from '@/components/FilterBar/FilterBar';
 import BenchCard from '@/components/BenchCard/BenchCard';
 import { Armchair } from 'lucide-react';
+import { useMeetupClock } from '@/hooks/useMeetupClock';
 
 export default function ListPage() {
   const { benches, getFilteredBenches, initialize, initialized } = useBenchStore();
+  useMeetupClock();
   const filteredBenches = getFilteredBenches();
 
   useEffect(() => {

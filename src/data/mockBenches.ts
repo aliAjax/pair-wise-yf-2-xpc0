@@ -14,6 +14,7 @@ export const mockBenches: Bench[] = [
     noiseLevel: 'quiet',
     stayDuration: 'long',
     rating: 5,
+    seatCount: 4,
     review: '公园里最爱的长椅，夏天梧桐叶茂盛时完全遮阴，偶尔能听到鸟鸣。',
     experiences: [
       {
@@ -54,6 +55,7 @@ export const mockBenches: Bench[] = [
     noiseLevel: 'moderate',
     stayDuration: 'medium',
     rating: 3,
+    seatCount: 3,
     review: '视野很好能看到江景，但是夏天太烫，冬天又太凉。',
     experiences: [
       {
@@ -94,6 +96,7 @@ export const mockBenches: Bench[] = [
     noiseLevel: 'moderate',
     stayDuration: 'short',
     rating: 2,
+    seatCount: 2,
     review: '没有靠背坐着不太舒服，适合短暂休息等人。',
     experiences: [
       {
@@ -120,6 +123,7 @@ export const mockBenches: Bench[] = [
     noiseLevel: 'quiet',
     stayDuration: 'verylong',
     rating: 4,
+    seatCount: 5,
     review: '在廊檐下，下雨也不怕，周围很安静，适合看书。',
     experiences: [
       {
@@ -153,6 +157,7 @@ export const mockBenches: Bench[] = [
     noiseLevel: 'noisy',
     stayDuration: 'short',
     rating: 1,
+    seatCount: 2,
     review: '人多嘈杂，椅子也不舒服，只能歇脚。',
     experiences: [
       {
@@ -179,6 +184,7 @@ export const mockBenches: Bench[] = [
     noiseLevel: 'quiet',
     stayDuration: 'long',
     rating: 5,
+    seatCount: 6,
     review: '学生时代的回忆，两排梧桐树完全遮住阳光，夏天特别凉快。',
     experiences: [
       {

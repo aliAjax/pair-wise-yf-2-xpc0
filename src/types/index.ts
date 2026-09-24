@@ -27,10 +27,52 @@ export interface Bench {
   stayDuration: StayDurationType;
   rating: number;
   review: string;
+  seatCount: number;
   experiences: BenchExperience[];
   createdAt: string;
   updatedAt: string;
 }
+
+/** 会合队伍状态：等待签到 → 已签到 → 已结束（散场/取消/超时） */
+export type OccupancyStatus = 'waiting' | 'checked_in' | 'finished';
+/** 时段释放（结束）原因 */
+export type ReleaseReason = 'finished' | 'cancelled' | 'no_show';
+
+export interface OccupancyRecord {
+  id: string;
+  benchId: string;
+  teamName: string;
+  leaderName: string;
+  /** 集合时刻 ISO 字符串 */
+  startTime: string;
+  /** 预计借坐时长（分钟） */
+  durationMinutes: number;
+  /** 人数 */
+  partySize: number;
+  status: OccupancyStatus;
+  createdAt: string;
+  checkedInAt: string | null;
+  releasedAt: string | null;
+  releaseReason: ReleaseReason | null;
+}
+
+/** 一张长椅当前的会合状态（由有效占用记录实时推导） */
+export interface BenchMeetupStatus {
+  available: boolean;
+  active: OccupancyRecord | null;
+}
+
+export const OCCUPANCY_STATUS_LABELS: Record<OccupancyStatus, string> = {
+  waiting: '待签到',
+  checked_in: '集合中',
+  finished: '已结束',
+};
+
+export const RELEASE_REASON_LABELS: Record<ReleaseReason, string> = {
+  finished: '队伍散场',
+  cancelled: '领队取消',
+  no_show: '到点未签到',
+};
 
 export const MATERIAL_LABELS: Record<MaterialType, string> = {
   wood: '木质',

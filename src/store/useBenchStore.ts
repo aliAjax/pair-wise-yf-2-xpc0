@@ -1,8 +1,18 @@
 import { create } from 'zustand';
-import type { Bench, BenchExperience, MaterialType, OrientationType, ShadeLevelType, NoiseLevelType, StayDurationType } from '@/types';
+import type { Bench, BenchExperience, MaterialType, OrientationType, ShadeLevelType, NoiseLevelType } from '@/types';
 import { loadBenches, saveBenches } from '@/utils/storage';
 import { generateId } from '@/utils/comfort';
 import { mockBenches } from '@/data/mockBenches';
+import { useOccupancyStore } from '@/store/useOccupancyStore';
+
+/** 旧档案没有座位数字段时的默认值 */
+const DEFAULT_SEAT_COUNT = 3;
+
+function withSeatCount(bench: Bench): Bench {
+  return typeof bench.seatCount === 'number' && bench.seatCount > 0
+    ? bench
+    : { ...bench, seatCount: DEFAULT_SEAT_COUNT };
+}
 
 interface BenchState {
   benches: Bench[];
@@ -48,7 +58,11 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
   initialize: () => {
     const stored = loadBenches();
     if (stored.length > 0) {
-      set({ benches: stored, initialized: true });
+      const migrated = stored.map(withSeatCount);
+      set({ benches: migrated, initialized: true });
+      if (migrated.some((b, i) => b !== stored[i])) {
+        saveBenches(migrated);
+      }
     } else {
       set({ benches: mockBenches, initialized: true });
       saveBenches(mockBenches);
@@ -97,6 +111,7 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
     const newBenches = get().benches.filter((bench) => bench.id !== id);
     set({ benches: newBenches });
     saveBenches(newBenches);
+    useOccupancyStore.getState().removeForBench(id);
   },
 
   getBenchById: (id) => {

@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Volume2, Sun, Armchair } from 'lucide-react';
+import { MapPin, Clock, Volume2, Sun, Armchair, Users } from 'lucide-react';
 import type { Bench } from '@/types';
 import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, STAY_DURATION_LABELS } from '@/types';
 import Rating from '@/components/Rating/Rating';
+import MeetupBadge from '@/components/MeetupBadge/MeetupBadge';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
 
 interface BenchCardProps {
@@ -35,8 +36,11 @@ export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
           <span className="text-ink-light ml-1">{comfortScore}</span>
         </div>
 
-        <div className="absolute top-3 left-3 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full text-xs text-ink-light">
-          {MATERIAL_LABELS[bench.material]}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          <span className="px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full text-xs text-ink-light">
+            {MATERIAL_LABELS[bench.material]}
+          </span>
+          <MeetupBadge bench={bench} className="backdrop-blur-sm shadow-sm" />
         </div>
       </div>
 
@@ -64,6 +68,10 @@ export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
               有靠背
             </span>
           )}
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-warm-beige text-ink-light text-xs rounded-md">
+            <Users className="w-3 h-3" />
+            {bench.seatCount} 座
+          </span>
         </div>
 
         <div className="flex items-center justify-between">

@@ -52,6 +52,7 @@ export default function AddEditPage() {
     noiseLevel: 'moderate' as NoiseLevelType,
     stayDuration: 'medium' as StayDurationType,
     rating: 3,
+    seatCount: 3,
     review: '',
   });
 
@@ -77,6 +78,7 @@ export default function AddEditPage() {
         noiseLevel: existingBench.noiseLevel,
         stayDuration: existingBench.stayDuration,
         rating: existingBench.rating,
+        seatCount: existingBench.seatCount,
         review: existingBench.review,
       });
       setExperiences(existingBench.experiences || []);
@@ -322,6 +324,22 @@ export default function AddEditPage() {
 
               <div>
                 <label className="block text-sm font-medium text-deep-brown mb-1.5">
+                  座位数 *
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={formData.seatCount}
+                  onChange={(e) =>
+                    handleChange('seatCount', Math.max(1, parseInt(e.target.value, 10) || 1))
+                  }
+                  className="w-full px-4 py-2.5 bg-white/50 border border-deep-brown/10 rounded-lg text-deep-brown focus:bg-white transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-deep-brown mb-1.5">
                   是否有靠背
                 </label>
                 <div className="flex items-center gap-4 h-[42px]">
@@ -399,7 +417,7 @@ export default function AddEditPage() {
 
             {experiences.length > 0 ? (
               <div className="space-y-4">
-                {experiences.map((exp, index) => {
+                {experiences.map((exp) => {
                   const TimeIcon = timePeriodIcons[exp.timePeriod];
                   return (
                     <div

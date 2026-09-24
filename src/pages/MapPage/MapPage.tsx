@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Armchair, Info } from 'lucide-react';
+import { MapPin, Armchair, Info, CircleCheck, Flag } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
-import { calculateComfortScore, getComfortColor } from '@/utils/comfort';
+import { useOccupancyStore } from '@/store/useOccupancyStore';
+import { useMeetupClock } from '@/hooks/useMeetupClock';
+import { getBenchMeetupStatus } from '@/utils/meetup';
 import type { Bench } from '@/types';
 
 export default function MapPage() {
   const { benches, initialize, initialized } = useBenchStore();
+  const records = useOccupancyStore((s) => s.records);
   const navigate = useNavigate();
   const [hoveredBench, setHoveredBench] = useState<Bench | null>(null);
+  useMeetupClock();
 
   useEffect(() => {
     if (!initialized) {
@@ -59,9 +63,9 @@ export default function MapPage() {
 
           {benches.map((bench) => {
             const position = getPositionStyle(bench);
-            const comfortScore = calculateComfortScore(bench);
-            const colorClass = getComfortColor(comfortScore);
-            
+            const meetup = getBenchMeetupStatus(bench.id, records);
+            const colorClass = meetup.available ? 'text-moss-green' : 'text-red-500';
+
             return (
               <button
                 key={bench.id}
@@ -79,23 +83,48 @@ export default function MapPage() {
                     fill="currentColor"
                   />
                   <div className="absolute top-1 left-1/2 -translate-x-1/2">
-                    <Armchair className="w-3 h-3 text-white" />
+                    {meetup.available ? (
+                      <Armchair className="w-3 h-3 text-white" />
+                    ) : (
+                      <Flag className="w-3 h-3 text-white" fill="currentColor" />
+                    )}
                   </div>
                 </div>
 
                 {hoveredBench?.id === bench.id && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 translate-y-full w-48 paper-texture rounded-lg shadow-paper-hover p-3 z-20 pointer-events-none">
+                  <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 translate-y-full w-52 paper-texture rounded-lg shadow-paper-hover p-3 z-20 pointer-events-none">
                     <h4 className="font-serif font-medium text-deep-brown text-sm mb-1 line-clamp-1">
                       {bench.name}
                     </h4>
                     <p className="text-xs text-ink-light line-clamp-1 mb-2">
                       {bench.location}
                     </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-ink-light">舒适度</span>
-                      <span className={`text-sm font-medium ${colorClass}`}>
-                        {comfortScore}
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-medium ${
+                          meetup.available ? 'text-moss-green' : 'text-red-500'
+                        }`}
+                      >
+                        {meetup.available ? (
+                          <CircleCheck className="w-3 h-3" />
+                        ) : (
+                          <Flag className="w-3 h-3" />
+                        )}
+                        {meetup.available
+                          ? `可会合 · ${bench.seatCount} 座`
+                          : `已有队伍 · ${meetup.active?.partySize ?? ''}人`}
                       </span>
+                      {!meetup.available && meetup.active && (
+                        <span className="text-[11px] text-ink-light whitespace-nowrap">
+                          {new Date(meetup.active.startTime).toLocaleString('zh-CN', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                          })}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -115,15 +144,11 @@ export default function MapPage() {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-moss-green" fill="currentColor" />
-                <span className="text-xs text-ink-light">极佳/优秀</span>
+                <span className="text-xs text-ink-light">可会合</span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-ochre" fill="currentColor" />
-                <span className="text-xs text-ink-light">良好</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-ink-light" fill="currentColor" />
-                <span className="text-xs text-ink-light">一般/较差</span>
+                <MapPin className="w-4 h-4 text-red-500" fill="currentColor" />
+                <span className="text-xs text-ink-light">已有队伍</span>
               </div>
             </div>
           </div>
