@@ -5,8 +5,11 @@ import MapPage from '@/pages/MapPage/MapPage';
 import RankingPage from '@/pages/RankingPage/RankingPage';
 import BenchDetail from '@/pages/BenchDetail/BenchDetail';
 import AddEditPage from '@/pages/AddEditPage/AddEditPage';
+import { useMeetingSync } from '@/hooks/useMeetingSync';
 
 export default function App() {
+  useMeetingSync();
+
   return (
     <Router>
       <div className="min-h-screen">

@@ -45,6 +45,7 @@ export default function AddEditPage() {
     location: '',
     lat: 31.23,
     lng: 121.47,
+    seatCount: 4,
     material: 'wood' as MaterialType,
     orientation: 'south' as OrientationType,
     hasBackrest: true,
@@ -70,6 +71,7 @@ export default function AddEditPage() {
         location: existingBench.location,
         lat: existingBench.lat,
         lng: existingBench.lng,
+        seatCount: existingBench.seatCount,
         material: existingBench.material,
         orientation: existingBench.orientation,
         hasBackrest: existingBench.hasBackrest,
@@ -225,6 +227,23 @@ export default function AddEditPage() {
                     className="w-full px-4 py-2.5 bg-white/50 border border-deep-brown/10 rounded-lg text-deep-brown focus:bg-white transition-colors"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-deep-brown mb-1.5">
+                  座位数
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={formData.seatCount}
+                  onChange={(e) => handleChange('seatCount', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="w-full px-4 py-2.5 bg-white/50 border border-deep-brown/10 rounded-lg text-deep-brown focus:bg-white transition-colors"
+                />
+                <p className="text-xs text-ink-light/60 mt-1">
+                  可同时坐下的人数，决定能不能在这会合
+                </p>
               </div>
             </div>
           </div>
@@ -399,7 +418,7 @@ export default function AddEditPage() {
 
             {experiences.length > 0 ? (
               <div className="space-y-4">
-                {experiences.map((exp, index) => {
+                {experiences.map((exp) => {
                   const TimeIcon = timePeriodIcons[exp.timePeriod];
                   return (
                     <div

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Armchair, Info } from 'lucide-react';
+import { MapPin, Info, Users, CalendarClock } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
-import { calculateComfortScore, getComfortColor } from '@/utils/comfort';
+import { calculateComfortScore } from '@/utils/comfort';
+import { getCurrentMeeting, formatTime } from '@/utils/meeting';
 import type { Bench } from '@/types';
 
 export default function MapPage() {
-  const { benches, initialize, initialized } = useBenchStore();
+  const { benches, meetings, initialize, initialized } = useBenchStore();
   const navigate = useNavigate();
   const [hoveredBench, setHoveredBench] = useState<Bench | null>(null);
 
@@ -60,8 +61,12 @@ export default function MapPage() {
           {benches.map((bench) => {
             const position = getPositionStyle(bench);
             const comfortScore = calculateComfortScore(bench);
-            const colorClass = getComfortColor(comfortScore);
-            
+            const activeMeeting = getCurrentMeeting(meetings, bench.id);
+            const occupied = !!activeMeeting;
+            const markerColor = occupied
+              ? 'text-ochre'
+              : 'text-moss-green';
+
             return (
               <button
                 key={bench.id}
@@ -75,11 +80,15 @@ export default function MapPage() {
                   hoveredBench?.id === bench.id ? 'scale-125 z-10' : 'z-0'
                 } transition-transform duration-200`}>
                   <MapPin
-                    className={`w-8 h-8 ${colorClass} drop-shadow-md group-hover:drop-shadow-lg transition-all`}
+                    className={`w-8 h-8 ${markerColor} drop-shadow-md group-hover:drop-shadow-lg transition-all`}
                     fill="currentColor"
                   />
                   <div className="absolute top-1 left-1/2 -translate-x-1/2">
-                    <Armchair className="w-3 h-3 text-white" />
+                    {occupied ? (
+                      <Users className="w-3 h-3 text-white" />
+                    ) : (
+                      <CalendarClock className="w-3 h-3 text-white" />
+                    )}
                   </div>
                 </div>
 
@@ -91,9 +100,20 @@ export default function MapPage() {
                     <p className="text-xs text-ink-light line-clamp-1 mb-2">
                       {bench.location}
                     </p>
-                    <div className="flex items-center justify-between">
+                    <div className={`flex items-center justify-between text-xs px-2 py-1 rounded-md mb-1 ${
+                      occupied ? 'bg-ochre/10 text-ochre' : 'bg-moss-green/10 text-moss-green'
+                    }`}>
+                      <span>{occupied ? '已有队伍' : '可会合'}</span>
+                      <span>{bench.seatCount} 座</span>
+                    </div>
+                    {occupied && activeMeeting && (
+                      <div className="text-xs text-ink-light">
+                        {activeMeeting.teamName} · {formatTime(activeMeeting.meetAt)} 集合 · {activeMeeting.peopleCount} 人
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-ink-light">舒适度</span>
-                      <span className={`text-sm font-medium ${colorClass}`}>
+                      <span className="text-sm font-medium text-ink-light">
                         {comfortScore}
                       </span>
                     </div>
@@ -115,15 +135,11 @@ export default function MapPage() {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-moss-green" fill="currentColor" />
-                <span className="text-xs text-ink-light">极佳/优秀</span>
+                <span className="text-xs text-ink-light">可会合</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-ochre" fill="currentColor" />
-                <span className="text-xs text-ink-light">良好</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-ink-light" fill="currentColor" />
-                <span className="text-xs text-ink-light">一般/较差</span>
+                <span className="text-xs text-ink-light">已有队伍占用</span>
               </div>
             </div>
           </div>

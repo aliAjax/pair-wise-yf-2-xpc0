@@ -14,6 +14,7 @@ import {
   Sunset,
   Moon,
   CloudSun,
+  Users,
 } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
 import {
@@ -26,6 +27,7 @@ import {
 } from '@/types';
 import type { TimePeriodType } from '@/types';
 import Rating from '@/components/Rating/Rating';
+import MeetingPanel from '@/components/MeetingPanel/MeetingPanel';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
 
 export default function BenchDetail() {
@@ -179,6 +181,13 @@ export default function BenchDetail() {
                     {STAY_DURATION_LABELS[bench.stayDuration]}
                   </span>
                 </div>
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-ink-light" />
+                  <span className="text-sm text-ink-light">座位</span>
+                  <span className="text-sm font-medium text-deep-brown">
+                    {bench.seatCount} 个
+                  </span>
+                </div>
               </div>
 
               <div className="mb-6">
@@ -214,6 +223,8 @@ export default function BenchDetail() {
         </div>
 
         <div className="space-y-6">
+          <MeetingPanel bench={bench} />
+
           <div className="paper-texture rounded-xl shadow-paper p-6 fade-in opacity-0 stagger-2">
             <h2 className="font-serif text-lg font-semibold text-deep-brown mb-4">
               分时段体验

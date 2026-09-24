@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import type { Bench, BenchExperience, MaterialType, OrientationType, ShadeLevelType, NoiseLevelType, StayDurationType } from '@/types';
-import { loadBenches, saveBenches } from '@/utils/storage';
+import type { Bench, BenchExperience, MaterialType, OrientationType, ShadeLevelType, NoiseLevelType, Meeting, MeetingInput, MeetingResult } from '@/types';
+import { loadBenches, saveBenches, loadMeetings, saveMeetings, normalizeBench } from '@/utils/storage';
 import { generateId } from '@/utils/comfort';
+import { findConflictingMeeting, getAutoStatus, formatTime, formatDuration } from '@/utils/meeting';
 import { mockBenches } from '@/data/mockBenches';
 
 interface BenchState {
   benches: Bench[];
+  meetings: Meeting[];
   searchQuery: string;
   materialFilter: MaterialType | null;
   orientationFilter: OrientationType | null;
@@ -30,10 +32,17 @@ interface BenchActions {
   updateExperience: (benchId: string, expId: string, updates: Partial<BenchExperience>) => void;
   deleteExperience: (benchId: string, expId: string) => void;
   getFilteredBenches: () => Bench[];
+  getMeetingsByBench: (benchId: string) => Meeting[];
+  syncMeetings: () => void;
+  registerMeeting: (benchId: string, input: MeetingInput) => MeetingResult;
+  checkInMeeting: (meetingId: string) => void;
+  cancelMeeting: (meetingId: string) => void;
+  endMeeting: (meetingId: string) => void;
 }
 
 const initialState: BenchState = {
   benches: [],
+  meetings: [],
   searchQuery: '',
   materialFilter: null,
   orientationFilter: null,
@@ -46,13 +55,15 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
   ...initialState,
 
   initialize: () => {
+    if (get().initialized) return;
     const stored = loadBenches();
     if (stored.length > 0) {
-      set({ benches: stored, initialized: true });
+      set({ benches: stored.map(normalizeBench), meetings: loadMeetings(), initialized: true });
     } else {
-      set({ benches: mockBenches, initialized: true });
+      set({ benches: mockBenches, meetings: [], initialized: true });
       saveBenches(mockBenches);
     }
+    get().syncMeetings();
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -95,8 +106,10 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
 
   deleteBench: (id) => {
     const newBenches = get().benches.filter((bench) => bench.id !== id);
-    set({ benches: newBenches });
+    const newMeetings = get().meetings.filter((meeting) => meeting.benchId !== id);
+    set({ benches: newBenches, meetings: newMeetings });
     saveBenches(newBenches);
+    saveMeetings(newMeetings);
   },
 
   getBenchById: (id) => {
@@ -154,7 +167,7 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
 
   getFilteredBenches: () => {
     const { benches, searchQuery, materialFilter, orientationFilter, shadeFilter, noiseFilter } = get();
-    
+
     return benches.filter((bench) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -163,13 +176,120 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
         const matchReview = bench.review.toLowerCase().includes(query);
         if (!matchName && !matchLocation && !matchReview) return false;
       }
-      
+
       if (materialFilter && bench.material !== materialFilter) return false;
       if (orientationFilter && bench.orientation !== orientationFilter) return false;
       if (shadeFilter && bench.shadeLevel !== shadeFilter) return false;
       if (noiseFilter && bench.noiseLevel !== noiseFilter) return false;
-      
+
       return true;
     });
+  },
+
+  getMeetingsByBench: (benchId) => {
+    return get().meetings.filter((meeting) => meeting.benchId === benchId);
+  },
+
+  // 到点未签到自动释放、已签到且预计借坐已结束自动散场
+  syncMeetings: () => {
+    const now = Date.now();
+    let changed = false;
+    const newMeetings = get().meetings.map((meeting) => {
+      const nextStatus = getAutoStatus(meeting, now);
+      if (!nextStatus) return meeting;
+      changed = true;
+      return { ...meeting, status: nextStatus, updatedAt: new Date(now).toISOString() };
+    });
+    if (changed) {
+      set({ meetings: newMeetings });
+      saveMeetings(newMeetings);
+    }
+  },
+
+  registerMeeting: (benchId, input) => {
+    get().syncMeetings();
+    const bench = get().benches.find((b) => b.id === benchId);
+    if (!bench) {
+      return { success: false, reason: '找不到这张长椅' };
+    }
+
+    const meetTime = new Date(input.meetAt).getTime();
+    if (Number.isNaN(meetTime)) {
+      return { success: false, reason: '请选择有效的集合时刻' };
+    }
+    if (meetTime < Date.now()) {
+      return { success: false, reason: '集合时刻已过，请选择未来的时间' };
+    }
+    if (!Number.isInteger(input.peopleCount) || input.peopleCount <= 0) {
+      return { success: false, reason: '请填写正确的人数（至少 1 人）' };
+    }
+    if (input.peopleCount > bench.seatCount) {
+      return {
+        success: false,
+        reason: `座位不够：这张长椅只有 ${bench.seatCount} 个座位，本次 ${input.peopleCount} 人坐不下`,
+      };
+    }
+    if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0) {
+      return { success: false, reason: '请选择预计借坐时长' };
+    }
+
+    const conflict = findConflictingMeeting(get().meetings, benchId, input);
+    if (conflict) {
+      return {
+        success: false,
+        reason: `时段冲突：${conflict.teamName} 已登记 ${formatTime(conflict.meetAt)} 起借坐 ${formatDuration(conflict.durationMinutes)}，这段时间座位已被占用`,
+      };
+    }
+
+    const now = new Date().toISOString();
+    const meeting: Meeting = {
+      id: generateId(),
+      benchId,
+      teamName: input.teamName.trim() || '周末散步队',
+      leaderName: input.leaderName.trim(),
+      meetAt: new Date(meetTime).toISOString(),
+      peopleCount: input.peopleCount,
+      durationMinutes: input.durationMinutes,
+      status: 'booked',
+      createdAt: now,
+      updatedAt: now,
+    };
+    const newMeetings = [...get().meetings, meeting];
+    set({ meetings: newMeetings });
+    saveMeetings(newMeetings);
+    return { success: true, meeting };
+  },
+
+  checkInMeeting: (meetingId) => {
+    const now = new Date().toISOString();
+    const newMeetings = get().meetings.map((meeting) =>
+      meeting.id === meetingId && meeting.status === 'booked'
+        ? { ...meeting, status: 'checkedIn' as const, updatedAt: now }
+        : meeting
+    );
+    set({ meetings: newMeetings });
+    saveMeetings(newMeetings);
+  },
+
+  cancelMeeting: (meetingId) => {
+    const now = new Date().toISOString();
+    const newMeetings = get().meetings.map((meeting) =>
+      meeting.id === meetingId && meeting.status !== 'cancelled'
+        ? { ...meeting, status: 'cancelled' as const, updatedAt: now }
+        : meeting
+    );
+    set({ meetings: newMeetings });
+    saveMeetings(newMeetings);
+  },
+
+  endMeeting: (meetingId) => {
+    const now = new Date().toISOString();
+    const newMeetings = get().meetings.map((meeting) =>
+      meeting.id === meetingId && meeting.status !== 'ended'
+        ? { ...meeting, status: 'ended' as const, updatedAt: now }
+        : meeting
+    );
+    set({ meetings: newMeetings });
+    saveMeetings(newMeetings);
   },
 }));

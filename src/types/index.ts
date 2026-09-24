@@ -13,12 +13,48 @@ export interface BenchExperience {
   rating: number;
 }
 
+/** 会合状态：已登记待签到 / 已签到会合中 / 已散场 / 已取消 / 到点未签到 */
+export type MeetingStatusType = 'booked' | 'checkedIn' | 'ended' | 'cancelled' | 'noShow';
+
+/** 长椅的占用记录（本地存档，不接后台） */
+export interface Meeting {
+  id: string;
+  benchId: string;
+  teamName: string;
+  leaderName: string;
+  /** 集合时刻，ISO 字符串 */
+  meetAt: string;
+  /** 人数 */
+  peopleCount: number;
+  /** 预计借坐时长（分钟） */
+  durationMinutes: number;
+  status: MeetingStatusType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 领队登记表单入参 */
+export interface MeetingInput {
+  teamName: string;
+  leaderName: string;
+  meetAt: string;
+  peopleCount: number;
+  durationMinutes: number;
+}
+
+/** 登记结果：成功或带冲突原因的失败 */
+export type MeetingResult =
+  | { success: true; meeting: Meeting }
+  | { success: false; reason: string };
+
 export interface Bench {
   id: string;
   name: string;
   location: string;
   lat: number;
   lng: number;
+  /** 座位数 */
+  seatCount: number;
   material: MaterialType;
   orientation: OrientationType;
   hasBackrest: boolean;
@@ -85,3 +121,17 @@ export const TIME_PERIOD_ICONS: Record<TimePeriodType, string> = {
   evening: 'sunset',
   night: 'moon',
 };
+
+export const MEETING_STATUS_LABELS: Record<MeetingStatusType, string> = {
+  booked: '待签到',
+  checkedIn: '会合中',
+  ended: '已散场',
+  cancelled: '已取消',
+  noShow: '未签到',
+};
+
+/** 可选的预计借坐时长（分钟） */
+export const MEETING_DURATION_OPTIONS: number[] = [15, 30, 45, 60, 90, 120];
+
+/** 超过集合时刻多少分钟未签到，自动释放时段 */
+export const MEETING_GRACE_MINUTES = 10;
